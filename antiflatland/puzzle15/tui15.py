@@ -1,3 +1,4 @@
+import argparse
 import sys
 from tabulate import tabulate
 import tty
@@ -8,6 +9,7 @@ tabulate.PRESERVE_WHITESPACE = True
 
 DEFAULT_SHUFFLE_MOVES = 5
 number_of_shuffle_moves = DEFAULT_SHUFFLE_MOVES
+DEFAULT_DIMENSIONS = [4, 4, 4, 4]
 
 MOVE_UP = 1
 MOVE_DOWN = 2
@@ -226,9 +228,47 @@ def shuffle(array):
 def init_array():
     return [i for i in range(1, 17)]
 
+def dimension_type(value):
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer")
+    if not (1 <= ivalue <= 16):
+        raise argparse.ArgumentTypeError(f"dimension must be an integer from 1 to 16, got {ivalue}")
+    return ivalue
+
+class DimensionsAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if len(values) > 4:
+            parser.error(f"argument {option_string or '-d/--dimensions'}: allowed up to 4 values, got {len(values)}")
+        if len(values) < 4:
+            values = values + [1] * (4 - len(values))
+        setattr(namespace, self.dest, values)
+
+def build_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-s",
+        "--shuffle-moves",
+        type=int,
+        default=DEFAULT_SHUFFLE_MOVES,
+        help="number of shuffle moves",
+    )
+    parser.add_argument(
+        "-d",
+        "--dimensions",
+        nargs="*",
+        type=dimension_type,
+        default=DEFAULT_DIMENSIONS,
+        action=DimensionsAction,
+        help="board dimensions (up to 4 integers from 1 to 16, default: 4 4 4 4)",
+    )
+    return parser
+
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        number_of_shuffle_moves = int(sys.argv[1])
+    parser = build_parser()
+    args = parser.parse_args()
+    number_of_shuffle_moves = args.shuffle_moves
     array = init_array()
     print("Press <Enter> or <Space> in order to shuffle, press O to order it back")
     print("Press arrows to move inside the square and WASD to move between the squares")
